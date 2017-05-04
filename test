@@ -1,0 +1,64 @@
+local renderTicks = 0
+addEventHandler("onClientPreRender", getRootElement(),
+    function()
+     if render_targets["count"] > 0 then
+			renderTicks = renderTicks + 1
+			if renderTicks >= 20 then render_targets["count"] = tonumber(render_targets["count"]) - 1 end
+			if not(layerEditor) then
+				for k, v in pairs(render_targets) do
+					if k ~= "count" then
+						if renderTicks >= 20 then
+							renderTicks = 0
+						else
+							break
+						end
+						k = tonumber(k)
+						local renderData = render_targets[k]
+						local theVeh = renderData[1]
+						if isElement(theVeh) then
+							local carID = tonumber(getElementData(theVeh, "car.id"))
+							local paint = getElementData(theVeh, "car.paint")
+							local carColor = split(tostring(getElementData(theVeh, "car.color")),",")
+							if not(paint) or not(carColor) then return false end
+							if utf8.len(paint) <= 0 then
+								render_targets[k] = nil
+								if paint_shaders[carID] then 
+									paint_shaders[carID]:removeFromWorldTexture("body", theVeh, nil, true)
+									paint_shaders[carID]:removeFromWorldTexture("?emap*", theVeh, nil, true)
+									paint_shaders[carID] = nil
+								end
+								return setVehicleColor(theVeh, carColor[1], carColor[2], carColor[3])
+							else
+								setVehicleColor(theVeh, 255, 255, 255)
+							end
+							
+							dxSetRenderTarget(renderData[2])
+								dxDrawImage(0, 0, 1024, 1024, 'stuff/pixel.png', 0, 0, 0, tocolor(carColor[1], carColor[2], carColor[3], 255))
+								if utf8.len(paint) > 0 then
+									paint = split(tostring(paint), ",")
+									for _, value in pairs(paint) do
+										local elems = split(tostring(value), "@")
+										local image = split(elems[1], "~")
+										local color = split(elems[7], "~")
+										dxDrawImage(tonumber(elems[2]), tonumber(elems[3]), tonumber(elems[4]), tonumber(elems[5]), 'html/'..image[1]..'/'..image[2]..'.png', tonumber(elems[6]), 0, 0, tocolor(color[1],color[2],color[3],255))
+									end
+								end
+							dxSetRenderTarget()
+							
+							if not(isElement(paint_shaders[carID])) then
+								paint_shaders[carID] = DxShader("stuff/shader.fx", 0, 110, true, "vehicle")
+								paint_shaders[carID]:applyToWorldTexture("body", theVeh, nil, true)
+								paint_shaders[carID]:applyToWorldTexture("?emap*", theVeh, nil, true)
+							end
+							
+							--texture = dxCreateTexture(dxGetTexturePixels())
+							paint_shaders[carID]:setValue("gTexture", renderData[2])
+
+							render_targets[k] = nil
+						end
+					end
+				end
+			end
+        end
+    end
+)
